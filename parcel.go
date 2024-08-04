@@ -16,22 +16,17 @@ func NewParcelStore(db *sql.DB) ParcelStore {
 func (s ParcelStore) Add(p Parcel) (int, error) {
 	// реализуйте добавление строки в таблицу parcel, используйте данные из переменной p
 	
-	client := p.Client
-	status := p.Status
-	address := p.Address
-	created_at := p.CreatedAt
-
 	res, err := s.db.Exec("INSERT INTO parcel (client, status, address, created_at) VALUES (:client, :status, :address, :created_at)",
-		sql.Named("client", client),
-		sql.Named("status", status),
-		sql.Named("address", address),
-		sql.Named("created_at", created_at))
+		sql.Named("client", p.Client),
+		sql.Named("status", p.Status),
+		sql.Named("address", p.Address),
+		sql.Named("created_at", p.CreatedAt))
 	if err != nil {
 		return 0, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		fmt.Println("Ошибка определения ID при добавлении")
+		return 0, err
 	}
 	return int(id), nil
 	// верните идентификатор последней добавленной записи
@@ -53,7 +48,6 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 	if err != nil {
 		return p, err
 	}
-
 	return p, nil
 }
 
@@ -68,7 +62,7 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	rows, err := s.db.Query("SELECT number, client, status, address, created_at FROM parcel WHERE client = (:client)",
 		sql.Named("client", client))
 	if err != nil {
-		fmt.Println("Ошибка чтения строки по Client")
+		return res, err
 	}
 	defer rows.Close()
 
@@ -76,13 +70,13 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 		p := Parcel{}
 		err := rows.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
 		if err != nil {
-			fmt.Println("Ошибка заполнения объекта Parcel")
+			return res, err
 		}
 		res = append(res, p)
 	}
 
 	if err := rows.Err(); err != nil {
-		fmt.Println("Ошибка заполнения объукта Parcel 2")
+		return res, err
 	}
 
 	return res, nil
@@ -94,7 +88,7 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 		sql.Named("status", status),
 		sql.Named("number", number))
 	if err != nil {
-		fmt.Println("Ошибка обновления статуса")
+		return err
 	}
 	return nil
 }
@@ -107,10 +101,7 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 		sql.Named("number", number),
 		sql.Named("status", ParcelStatusRegistered))
 
-	//if err != nil {
-	//	fmt.Println("Ошибка обновления Address")
-	//}
-	return err
+		return err
 }
 
 func (s ParcelStore) Delete(number int) error {
